@@ -802,3 +802,5 @@ function UI:Create(Info)
 
 	return GUI
 end
+
+return UI
