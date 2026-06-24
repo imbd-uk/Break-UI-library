@@ -1,6 +1,6 @@
 local UI = {}
 
---local CoreGui = game:GetService('CoreGui')
+local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -11,9 +11,6 @@ local viewport = workspace.CurrentCamera.ViewportSize
 local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Exponential, Enum.EasingDirection.InOut)
 
 local player = Players.LocalPlayer
-local mouse = player:GetMouse()
-
-local Connections = {}
 
 function UI:tween(object, goal, callback)
 	local tween = TweenService:Create(object, tweenInfo, goal)
@@ -34,17 +31,20 @@ function UI:Create(Info)
 	Info = UI:Validate({
 		Name = "Untitled",
 		Key = Enum.KeyCode.RightShift,
+		Colour = Color3.fromRGB(255, 139, 7),
 	}, Info or {})
 
 	local GUI = {
 		CurrentTab = nil,
+		Colour = Info.Colour,
 	}
 
+	local Connections = {}
 	--Render
 	do
 		GUI.screenUI = Instance.new("ScreenGui")
 		GUI.screenUI.Name = "Break UI LIBRARY"
-		GUI.screenUI.Parent = Players.LocalPlayer.PlayerGui --CHANGE BACK TO COREGUI WHEN NOT USING IN STUDIO
+		GUI.screenUI.Parent = CoreGui --CHANGE BACK TO COREGUI WHEN NOT USING IN STUDIO
 		GUI.screenUI.ResetOnSpawn = false
 		GUI.screenUI.ZIndexBehavior = Enum.ZIndexBehavior.Global
 
@@ -124,9 +124,8 @@ function UI:Create(Info)
 
 		GUI.UIStroke = Instance.new("UIStroke")
 		GUI.UIStroke.Parent = GUI.MainFrame
-		GUI.UIStroke.Color = Color3.fromRGB(255, 139, 7)
+		GUI.UIStroke.Color = GUI.Colour
 		GUI.UIStroke.Thickness = 1
-		GUI.UIStroke.Transparency = 0.25
 		GUI.UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
 		GUI.UIListLayout = Instance.new("UIListLayout")
@@ -147,26 +146,32 @@ function UI:Create(Info)
 			UDim2.new(oldPos.X.Scale, oldPos.X.Offset + delta.X, oldPos.Y.Scale, oldPos.Y.Offset + delta.Y)
 	end
 
-	GUI.MainFrame.InputBegan:Connect(function(input)
-		-- Check if input target is exactly MainFrame, not any of its children
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			GUI.IsDragging = true
-			StartingPoint = input.Position
-			oldPos = GUI.MainFrame.Position
+	table.insert(
+		Connections,
+		GUI.MainFrame.InputBegan:Connect(function(input)
+			-- Check if input target is exactly MainFrame, not any of its children
+			if input.UserInputType == Enum.UserInputType.MouseButton1 then
+				GUI.IsDragging = true
+				StartingPoint = input.Position
+				oldPos = GUI.MainFrame.Position
 
-			input.Changed:Connect(function()
-				if input.UserInputState == Enum.UserInputState.End then
-					GUI.IsDragging = false
-				end
-			end)
-		end
-	end)
+				input.Changed:Connect(function()
+					if input.UserInputState == Enum.UserInputState.End then
+						GUI.IsDragging = false
+					end
+				end)
+			end
+		end)
+	)
 
-	GUI.MainFrame.InputChanged:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseMovement then
-			dragInput = input
-		end
-	end)
+	table.insert(
+		Connections,
+		GUI.MainFrame.InputChanged:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseMovement then
+				dragInput = input
+			end
+		end)
+	)
 
 	table.insert(
 		Connections,
@@ -204,7 +209,7 @@ function UI:Create(Info)
 			Tab.Frame = Instance.new("Frame")
 			Tab.Frame.Parent = GUI.TabsHolder
 			Tab.Frame.Name = info.Name or "Tab"
-			Tab.Frame.Size = UDim2.new(0, 100, 1, 0)
+			Tab.Frame.Size = UDim2.new(0, 101, 1, 0)
 			Tab.Frame.BackgroundColor3 = Color3.fromRGB(66, 73, 79)
 			Tab.Frame.BorderSizePixel = 0
 			Tab.Button = Instance.new("TextLabel")
@@ -250,7 +255,7 @@ function UI:Create(Info)
 					end
 
 					Tab.Active = true
-					UI:tween(Tab.Frame, { BackgroundColor3 = Color3.fromRGB(255, 139, 7) })
+					UI:tween(Tab.Frame, { BackgroundColor3 = GUI.Colour })
 					Tab.Container.Visible = true
 					GUI.CurrentTab = Tab
 				end
@@ -265,19 +270,25 @@ function UI:Create(Info)
 				end
 			end
 
-			Tab.Frame.MouseEnter:Connect(function()
-				Tab.Hover = true
-				if Tab.Active then
-					UI:tween(Tab.Frame, { BackgroundColor3 = Color3.fromRGB(255, 139, 7) })
-				end
-			end)
+			table.insert(
+				Connections,
+				Tab.Frame.MouseEnter:Connect(function()
+					Tab.Hover = true
+					if Tab.Active then
+						UI:tween(Tab.Frame, { BackgroundColor3 = GUI.Colour })
+					end
+				end)
+			)
 
-			Tab.Frame.MouseLeave:Connect(function()
-				Tab.Hover = false
-				if not Tab.Active then
-					UI:tween(Tab.Frame, { BackgroundColor3 = Color3.fromRGB(66, 73, 79) })
-				end
-			end)
+			table.insert(
+				Connections,
+				Tab.Frame.MouseLeave:Connect(function()
+					Tab.Hover = false
+					if not Tab.Active then
+						UI:tween(Tab.Frame, { BackgroundColor3 = Color3.fromRGB(66, 73, 79) })
+					end
+				end)
+			)
 
 			table.insert(
 				Connections,
@@ -305,11 +316,12 @@ function UI:Create(Info)
 			Section.Section.BorderColor3 = Color3.fromRGB(0, 0, 0)
 			Section.Section.BorderSizePixel = 0
 			Section.Section.Size = UDim2.new(0, 200, 1, 0)
+			Section.Section.ClipsDescendants = true
 
 			Section.UIStroke = Instance.new("UIStroke")
 			Section.UIStroke.Parent = Section.Section
 			Section.UIStroke.Transparency = 0.25
-			Section.UIStroke.Color = Color3.fromRGB(255, 139, 7)
+			Section.UIStroke.Color = GUI.Colour
 
 			Section.UIListLayout_3 = Instance.new("UIListLayout")
 			Section.UIListLayout_3.Parent = Section.Section
@@ -326,6 +338,7 @@ function UI:Create(Info)
 			function Section:Button(info)
 				UI:Validate({
 					Name = "Button",
+					icon = "",
 					callback = function() end,
 				}, info or {})
 
@@ -364,14 +377,14 @@ function UI:Create(Info)
 
 					Button.ImageLabel = Instance.new("ImageLabel")
 					Button.ImageLabel.Parent = Button.ButtonFrame
-					Button.ImageLabel.AnchorPoint = Vector2.new(1, 0)
+					Button.ImageLabel.AnchorPoint = Vector2.new(1, 0.5)
 					Button.ImageLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 					Button.ImageLabel.BackgroundTransparency = 1.000
 					Button.ImageLabel.BorderColor3 = Color3.fromRGB(0, 0, 0)
 					Button.ImageLabel.BorderSizePixel = 0
-					Button.ImageLabel.Position = UDim2.new(1, 0, 0, 0)
+					Button.ImageLabel.Position = UDim2.new(1, 0, 0.5, 0)
 					Button.ImageLabel.Size = UDim2.new(0, 30, 1, -5)
-					Button.ImageLabel.Image = "rbxassetid://102276835764450"
+					Button.ImageLabel.Image = info.icon
 
 					Button.UIStroke = Instance.new("UIStroke")
 					Button.UIStroke.Parent = Button.ButtonFrame
@@ -390,18 +403,24 @@ function UI:Create(Info)
 				end
 				--logic
 				do
-					Button.ButtonFrame.MouseEnter:Connect(function()
-						Button.Hover = true
-						UI:tween(Button.ButtonFrame, { BackgroundColor3 = Color3.fromRGB(50, 52, 56) })
-					end)
+					table.insert(
+						Connections,
+						Button.ButtonFrame.MouseEnter:Connect(function()
+							Button.Hover = true
+							UI:tween(Button.ButtonFrame, { BackgroundColor3 = Color3.fromRGB(50, 52, 56) })
+						end)
+					)
 
-					Button.ButtonFrame.MouseLeave:Connect(function()
-						Button.Hover = false
+					table.insert(
+						Connections,
+						Button.ButtonFrame.MouseLeave:Connect(function()
+							Button.Hover = false
 
-						if not Button.MouseDown then
-							UI:tween(Button.ButtonFrame, { BackgroundColor3 = Color3.fromRGB(35, 36, 39) })
-						end
-					end)
+							if not Button.MouseDown then
+								UI:tween(Button.ButtonFrame, { BackgroundColor3 = Color3.fromRGB(35, 36, 39) })
+							end
+						end)
+					)
 
 					table.insert(
 						Connections,
@@ -518,23 +537,31 @@ function UI:Create(Info)
 					Slider.SliderMove = Instance.new("Frame")
 					Slider.SliderMove.Name = "SliderMove"
 					Slider.SliderMove.Parent = Slider.SliderBack
-					Slider.SliderMove.BackgroundColor3 = Color3.fromRGB(255, 139, 7)
+					Slider.SliderMove.BackgroundColor3 = GUI.Colour
 					Slider.SliderMove.BorderColor3 = Color3.fromRGB(0, 0, 0)
 					Slider.SliderMove.BorderSizePixel = 0
 					Slider.SliderMove.Size = UDim2.new(0, 0, 1, 0)
 				end
 
 				--method
+
+				function roundToDecimal(number, decimalPlaces)
+					local multiplier = 10 ^ decimalPlaces
+					return math.round(number * multiplier) / multiplier
+				end
+
 				function Slider:SetValue(v)
 					if v == nil then
 						GUI.IsDragging = false
+						local mousepos = UserInputService:GetMouseLocation()
 						local percentage = math.clamp(
-							(mouse.X - Slider.SliderBack.AbsolutePosition.X) / Slider.SliderBack.AbsoluteSize.X,
+							(mousepos.X - Slider.SliderBack.AbsolutePosition.X) / Slider.SliderBack.AbsoluteSize.X,
 							0,
 							1
 						)
 
 						local sliderValue = math.floor(options.min + (options.max - options.min) * percentage)
+						--local sliderValue = math.round(options.min + (options.max - options.min)*  percentage )
 						Slider.ValueText.Text = tostring(sliderValue)
 						Slider.SliderMove.Size = UDim2.fromScale(percentage, 1)
 					else
@@ -549,16 +576,22 @@ function UI:Create(Info)
 				end
 				--logic
 				do
-					Slider.SliderBack.MouseEnter:Connect(function()
-						Slider.Hover = true
-					end)
+					table.insert(
+						Connections,
+						Slider.SliderBack.MouseEnter:Connect(function()
+							Slider.Hover = true
+						end)
+					)
 
-					Slider.SliderBack.MouseLeave:Connect(function()
-						Slider.Hover = false
+					table.insert(
+						Connections,
+						Slider.SliderBack.MouseLeave:Connect(function()
+							Slider.Hover = false
 
-						if not Slider.MouseDown then
-						end
-					end)
+							if not Slider.MouseDown then
+							end
+						end)
+					)
 
 					table.insert(
 						Connections,
@@ -570,9 +603,12 @@ function UI:Create(Info)
 								Slider.MouseDown = true
 
 								if not Slider.Connection then
-									Slider.Connection = RunService.RenderStepped:Connect(function()
-										Slider:SetValue()
-									end)
+									Slider.Connection = table.insert(
+										Connections,
+										RunService.RenderStepped:Connect(function()
+											Slider:SetValue()
+										end)
+									)
 								end
 							end
 						end)
@@ -602,7 +638,7 @@ function UI:Create(Info)
 			function Section:Toggle(info)
 				UI:Validate({
 					Name = "Toggle",
-					callback = function() end,
+					callback = function(v) end,
 				}, info or {})
 				local Toggle = {
 					Hover = false,
@@ -641,6 +677,10 @@ function UI:Create(Info)
 				Toggle.ToggleLabel.TextSize = 20.000
 				Toggle.ToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
 
+				Toggle.UIPad = Instance.new("UIPadding")
+				Toggle.UIPad.Parent = Toggle.ToggleFrame
+				Toggle.UIPad.PaddingLeft = UDim.new(0, 1)
+
 				Toggle.ToggleColour = Instance.new("Frame")
 				Toggle.ToggleColour.Name = "ToggleButton"
 				Toggle.ToggleColour.Parent = Toggle.ToggleFrame
@@ -667,7 +707,7 @@ function UI:Create(Info)
 					info.callback(Toggle.State)
 
 					if Toggle.State then
-						UI:tween(Toggle.ToggleColour, { BackgroundColor3 = Color3.fromRGB(255, 139, 7) })
+						UI:tween(Toggle.ToggleColour, { BackgroundColor3 = GUI.Colour })
 					else
 						UI:tween(Toggle.ToggleColour, { BackgroundColor3 = Color3.fromRGB(33, 33, 39) })
 					end
@@ -675,19 +715,25 @@ function UI:Create(Info)
 
 				--logic
 				do
-					Toggle.ToggleColour.MouseEnter:Connect(function()
-						Toggle.Hover = true
-						if not Toggle.State then
-							UI:tween(Toggle.ToggleColour, { BackgroundColor3 = Color3.fromRGB(44, 44, 52) })
-						end
-					end)
+					table.insert(
+						Connections,
+						Toggle.ToggleColour.MouseEnter:Connect(function()
+							Toggle.Hover = true
+							if not Toggle.State then
+								UI:tween(Toggle.ToggleColour, { BackgroundColor3 = Color3.fromRGB(44, 44, 52) })
+							end
+						end)
+					)
 
-					Toggle.ToggleColour.MouseLeave:Connect(function()
-						Toggle.Hover = false
-						if not Toggle.State then
-							UI:tween(Toggle.ToggleColour, { BackgroundColor3 = Color3.fromRGB(33, 33, 39) })
-						end
-					end)
+					table.insert(
+						Connections,
+						Toggle.ToggleColour.MouseLeave:Connect(function()
+							Toggle.Hover = false
+							if not Toggle.State then
+								UI:tween(Toggle.ToggleColour, { BackgroundColor3 = Color3.fromRGB(33, 33, 39) })
+							end
+						end)
+					)
 
 					table.insert(
 						Connections,
@@ -722,7 +768,8 @@ function UI:Create(Info)
 
 			function Section:TextBox(info)
 				UI:Validate({
-					Name = "Text",
+					Text = "PlaceHolder",
+					focus = Enum.KeyCode.RightAlt,
 					callback = function(text)
 						print(text)
 					end,
@@ -744,13 +791,13 @@ function UI:Create(Info)
 
 					TextBox.TextBox = Instance.new("TextBox")
 					TextBox.TextBox.Parent = TextBox.TextBoxFrame
-					TextBox.TextBox.BackgroundColor3 = Color3.fromRGB(255, 139, 7)
+					TextBox.TextBox.BackgroundColor3 = GUI.Colour
 					TextBox.TextBox.BackgroundTransparency = 1.000
 					TextBox.TextBox.BorderColor3 = Color3.fromRGB(0, 0, 0)
 					TextBox.TextBox.BorderSizePixel = 0
 					TextBox.TextBox.Size = UDim2.new(1, 0, 1, 0)
 					TextBox.TextBox.Font = Enum.Font.SourceSans
-					TextBox.TextBox.PlaceholderText = "TextBox"
+					TextBox.TextBox.PlaceholderText = info.Text
 					TextBox.TextBox.Text = ""
 					TextBox.TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 					TextBox.TextBox.TextSize = 20.000
@@ -768,6 +815,10 @@ function UI:Create(Info)
 					end
 				end
 
+				function TextBox:SetCallback(fn)
+					info.callback = fn
+				end
+
 				function TextBox:EnterPressed(text)
 					if text == nil then
 						return
@@ -777,14 +828,209 @@ function UI:Create(Info)
 				end
 
 				--method
-				TextBox.TextBox.FocusLost:Connect(function(enterpressed)
-					if enterpressed then
-						local text = TextBox:GetText()
-						TextBox:EnterPressed(text)
-					end
-				end)
+				table.insert(
+					Connections,
+					UserInputService.InputBegan:Connect(function(input, g)
+						if g then
+							return
+						end
+						if input.KeyCode == info.focus then
+							TextBox.TextBox:CaptureFocus()
+						end
+					end)
+				)
+
+				table.insert(
+					Connections,
+					TextBox.TextBox.FocusLost:Connect(function(enterpressed)
+						if enterpressed then
+							local text = TextBox:GetText()
+							TextBox:EnterPressed(text)
+						end
+					end)
+				)
 
 				return TextBox
+			end
+
+			function Section:ListBox(info)
+				UI:Validate({
+					Name = "List",
+				}, info or {})
+
+				local Listbox = {}
+
+				--render
+				do
+					Listbox.ScrollingList = Instance.new("ScrollingFrame")
+					Listbox.ScrollingList.Name = "ScrollingList"
+					Listbox.ScrollingList.Parent = Section.Section
+					Listbox.ScrollingList.Active = true
+					Listbox.ScrollingList.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+					Listbox.ScrollingList.BackgroundTransparency = 1.000
+					Listbox.ScrollingList.BorderColor3 = Color3.fromRGB(0, 0, 0)
+					Listbox.ScrollingList.BorderSizePixel = 0
+					Listbox.ScrollingList.Size = UDim2.new(1, 0, 1, 0)
+					Listbox.ScrollingList.ScrollBarThickness = 0
+					Listbox.ScrollingList.CanvasSize = UDim2.new(0, 0, 10, 0)
+
+					Listbox.UIPadding = Instance.new("UIPadding")
+					Listbox.UIPadding.Parent = Listbox.ScrollingList
+					Listbox.UIPadding.PaddingTop = UDim.new(0, 2)
+					Listbox.UIPadding.PaddingBottom = UDim.new(0, 2)
+					Listbox.UIPadding.PaddingLeft = UDim.new(0, 1)
+					Listbox.UIPadding.PaddingRight = UDim.new(0, 1)
+
+					Listbox.UIListLayout = Instance.new("UIListLayout")
+					Listbox.UIListLayout.Parent = Listbox.ScrollingList
+					Listbox.UIListLayout.Padding = UDim.new(0, 5)
+				end
+
+				function Listbox:AddLabel(info)
+					UI:Validate({
+						Name = "Label",
+						Text = "Place Holder",
+					}, info or {})
+
+					local Label = {}
+
+					--render
+					do
+						Label.TextLabel = Instance.new("TextLabel")
+						Label.TextLabel.Parent = Listbox.ScrollingList
+						Label.TextLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+						Label.TextLabel.BackgroundTransparency = 1.000
+						Label.TextLabel.BorderColor3 = Color3.fromRGB(0, 0, 0)
+						Label.TextLabel.BorderSizePixel = 0
+						Label.TextLabel.Size = UDim2.new(1, 0, 0, 30)
+						Label.TextLabel.Font = Enum.Font.SourceSans
+						Label.TextLabel.Text = info.Text
+						Label.TextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+						Label.TextLabel.TextSize = 20.000
+						Label.TextLabel.ClipsDescendants = true
+
+						Label.UIStroke = Instance.new("UIStroke")
+						Label.UIStroke.Parent = Label.TextLabel
+						Label.UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+						Label.UIStroke.Color = Color3.fromRGB(86, 95, 104)
+						Label.UIStroke.Thickness = 1
+					end
+
+					function Label:ChangeText(text)
+						Label.TextLabel.Text = text
+					end
+
+					return Label
+				end
+
+				return Listbox
+			end
+
+			function Section:ToggleKey(info)
+				UI:Validate({
+					Name = "KeyBind",
+					Key = "...",
+					callback = function() end,
+				}, info or {})
+
+				local ToggleKey = {
+					Connection = nil,
+					key = info.Key,
+				}
+
+				--render
+				do
+					ToggleKey.Frame = Instance.new("Frame")
+					ToggleKey.Frame.Name = "ToggleKeyBindFrame"
+					ToggleKey.Frame.Parent = Section.Section
+					ToggleKey.Frame.AnchorPoint = Vector2.new(0.5, 0)
+					ToggleKey.Frame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+					ToggleKey.Frame.BackgroundTransparency = 1.000
+					ToggleKey.Frame.BorderColor3 = Color3.fromRGB(0, 0, 0)
+					ToggleKey.Frame.BorderSizePixel = 0
+					ToggleKey.Frame.Position = UDim2.new(0.5, 0, 0, 5)
+					ToggleKey.Frame.Size = UDim2.new(1, 0, 0, 30)
+					ToggleKey.UIStroke = Instance.new("UIStroke")
+					ToggleKey.UIStroke.Parent = ToggleKey.Frame
+					ToggleKey.UIStroke.Color = Color3.fromRGB(86, 95, 104)
+					ToggleKey.UIStroke.Thickness = 1
+
+					ToggleKey.Label = Instance.new("TextLabel")
+					ToggleKey.Label.Name = "ToggleKeyBindLabel"
+					ToggleKey.Label.Parent = ToggleKey.Frame
+					ToggleKey.Label.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+					ToggleKey.Label.BackgroundTransparency = 1.000
+					ToggleKey.Label.BorderColor3 = Color3.fromRGB(0, 0, 0)
+					ToggleKey.Label.BorderSizePixel = 0
+					ToggleKey.Label.Size = UDim2.new(1, 0, 1, 0)
+					ToggleKey.Label.Font = Enum.Font.SourceSans
+					ToggleKey.Label.Text = info.Name
+					ToggleKey.Label.TextColor3 = Color3.fromRGB(255, 255, 255)
+					ToggleKey.Label.TextSize = 20.000
+					ToggleKey.Label.TextXAlignment = Enum.TextXAlignment.Left
+
+					ToggleKey.Box = Instance.new("TextButton")
+					ToggleKey.Box.Name = "KeyBindBox"
+					ToggleKey.Box.Parent = ToggleKey.Frame
+					ToggleKey.Box.AnchorPoint = Vector2.new(1, 0)
+					ToggleKey.Box.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+					ToggleKey.Box.BackgroundTransparency = 1.000
+					ToggleKey.Box.BorderColor3 = Color3.fromRGB(0, 0, 0)
+					ToggleKey.Box.BorderSizePixel = 0
+					ToggleKey.Box.Position = UDim2.new(1, 0, 0, 0)
+					ToggleKey.Box.Size = UDim2.new(1, -150, 1, 0)
+					ToggleKey.Box.Font = Enum.Font.SourceSans
+					ToggleKey.Box.Text = tostring(info.Key)
+					ToggleKey.Box.TextColor3 = Color3.fromRGB(255, 255, 255)
+					ToggleKey.Box.TextSize = 20.000
+				end
+				--method
+
+				function ToggleKey:UpdateKey()
+					local newKey = ToggleKey.Box.Text:upper()
+					info.Key = Enum.KeyCode[newKey]
+					info.callback(info.Key)
+				end
+
+				-- Key listening logic
+				do
+					-- When TextBox is clicked, set it to "..." and listen for new key input
+					table.insert(
+						Connections,
+						ToggleKey.Box.MouseButton1Click:Connect(function()
+							ToggleKey.Box.Text = "..."
+							ToggleKey.Connection = table.insert(
+								Connections,
+								UserInputService.InputBegan:Connect(function(input, g)
+									if g then
+										return
+									end
+									if input.UserInputType == Enum.UserInputType.Keyboard then
+										if input.KeyCode.Name ~= "Unknown" then
+											info.Key = input.KeyCode.Name
+											ToggleKey.Box.Text = input.KeyCode.Name
+											ToggleKey.Connection:Disconnect()
+										end
+									end
+								end)
+							)
+						end)
+					)
+
+					table.insert(
+						Connections,
+						UserInputService.InputBegan:Connect(function(input, gp)
+							if gp then
+								return
+							end
+							if input.KeyCode.Name == info.Key then
+								info.callback()
+							end
+						end)
+					)
+				end
+
+				return ToggleKey
 			end
 
 			return Section
@@ -794,10 +1040,11 @@ function UI:Create(Info)
 	end
 
 	function GUI:Destroy()
-		for _, connection in pairs(Connections) do
+		for _, connection in Connections do
 			connection:Disconnect()
 		end
 		GUI.screenUI:Destroy()
+		GUI = nil
 	end
 
 	return GUI
